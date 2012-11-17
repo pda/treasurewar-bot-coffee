@@ -2,8 +2,8 @@ class @Explorer
 
   # start: Point
   # traversables: PointSet
-  # unexplored: PointSet
-  constructor: (@start, @traversables, @unexplored) ->
+  # goals: PointSet
+  constructor: (@start, @traversables, @goals) ->
 
   search: ->
     open = new PointSet([@start]) # To be evaluated.
@@ -15,7 +15,7 @@ class @Explorer
       current = open.values()[0]
 
       # Success
-      if @unexplored.contains(current)
+      if @goals.contains(current)
         path = @reconstructPath(cameFrom, current)
         path.shift()
         return path
@@ -25,7 +25,7 @@ class @Explorer
 
       for neighbor in @neighbors(current)
         continue if closed.contains(neighbor)
-        if @traversables.contains(neighbor) || @unexplored.contains(neighbor)
+        if @traversables.contains(neighbor) || @goals.contains(neighbor)
           open.add(neighbor)
           cameFrom[neighbor.toString()] = current
 
