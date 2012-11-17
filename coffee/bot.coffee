@@ -65,6 +65,10 @@ class World
       _(new Treasure).tap (t) ->
         t.setRawPosition(rp)
 
+  setYourStashRawPosition: (rawPoint) ->
+    @yourStash = _(new Stash()).tap (s) ->
+      s.setRawPosition(rawPoint)
+
   setStashRawPoints: (rawPoints) ->
     @stashes = _(rawPoints).map (rp) ->
       _(new Stash).tap (t) -> t.setRawPosition(rp)
@@ -105,6 +109,9 @@ class World
     @addWalls(data.tiles.filter (t) -> t.type == "wall")
     @addFloors()
 
+    # Your Stash
+    @setYourStashRawPosition(data.you.stash)
+
     # Nearby entities.
     @setTreasureRawPoints(_(data.nearby_items).filter (i) -> i.is_treasure)
     @setStashRawPoints(data.nearby_stashes)
@@ -123,14 +130,16 @@ class WorldRenderer
     for wall in @world.addedWalls
       wall.draw(drawingWalls)
 
-    # Draw self
-    @world.player.draw(drawingMain)
-
     # Draw stashes
     entity.draw(drawingMain) for entity in @world.stashes
 
+    @world.yourStash.draw(drawingMain)
+
     # Draw treasure
     entity.draw(drawingMain) for entity in @world.treasures
+
+    # Draw self
+    @world.player.draw(drawingMain)
 
     # Draw enemies
     entity.draw(drawingMain) for entity in @world.enemies
