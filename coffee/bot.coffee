@@ -5,7 +5,7 @@ TILES_Y = 40
 WIDTH = TILES_X * TILE_SIZE
 HEIGHT = TILES_Y * TILE_SIZE
 BACKGROUND = "black"
-VISION = 5
+VISION = 7
 COLORS = {
   unexplored: Color.black()
   explored: Color.gray(0.8)
