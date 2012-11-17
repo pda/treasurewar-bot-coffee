@@ -42,6 +42,7 @@ drawingGrid.grid(WIDTH, HEIGHT, TILE_SIZE, COLORS.grid)
 class World
   constructor: ->
     @walls = new PointSet([])
+    @floors = new PointSet([])
     @player = new Player()
     @treasures = []
     @stashes = []
@@ -78,6 +79,15 @@ class World
 
     # Wall updates.
     @addWalls(data.tiles.filter (t) -> t.type == "wall")
+
+    # Add other tiles in FoV as floor tiles.
+    position = @player.position
+    radius = Math.floor(VISION / 2)
+    for y in [(position.y - radius)..(position.y + radius)]
+      for x in [(position.x - radius)..(position.x + radius)]
+        point = Point.at(x, y)
+        unless @walls.contains(point) || @floors.contains(point)
+          @floors.add(point)
 
     # Nearby entities.
     @setTreasureRawPoints(_(data.nearby_items).filter (i) -> i.is_treasure)
