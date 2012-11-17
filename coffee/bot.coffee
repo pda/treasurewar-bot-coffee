@@ -10,7 +10,7 @@ COLORS = {
   unexplored: Color.black()
   explored: Color.gray(0.8)
   fog: Color.black(0.5)
-  grid: Color.string(255, 255, 255, 0.05)
+  grid: Color.string(255, 255, 255, 0.1)
   wall: Color.gray(0.2)
   player: Color.string(32, 32, 255)
   enemy: Color.string(255, 0, 0)
@@ -24,6 +24,7 @@ COLORS = {
   "fog",
   "walls",
   "main",
+  "pathfinding"
   "grid"
 )
 canvi.build()
@@ -33,6 +34,7 @@ canvi.layers["back"].style.backgroundColor = COLORS.unexplored
 @drawingFog = new DrawingTools(canvi.contexts["fog"])
 @drawingWalls = new DrawingTools(canvi.contexts["walls"])
 @drawingMain = new DrawingTools(canvi.contexts["main"])
+@drawingPathfinding = new DrawingTools(canvi.contexts["pathfinding"])
 @drawingGrid = new DrawingTools(canvi.contexts["grid"])
 
 # Background grid.
@@ -214,9 +216,9 @@ socket.on "tick", (data) ->
     world.unexplored
   )
   path = explorer.search()
-  drawingGrid.c.clearRect(0, 0, WIDTH, HEIGHT)
+  drawingPathfinding.c.clearRect(0, 0, WIDTH, HEIGHT)
   for point in path
-    drawingGrid.square(point.fromTile(TILE_SIZE), TILE_SIZE, Color.string(0, 255, 0, 0.5))
+    drawingPathfinding.square(point.fromTile(TILE_SIZE), TILE_SIZE, Color.string(0, 255, 0, 0.5))
 
   if path[0]?
     nextPoint = path[0]
