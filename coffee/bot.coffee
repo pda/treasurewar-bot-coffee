@@ -197,32 +197,18 @@ class Wall extends Entity
   color: -> COLORS.wall
 
 
-
-
 ##
-# Instances
+# Random shit
 
-@world = new World
-renderer = new WorldRenderer(world)
-
-
-##
-# WebSocket!
-
-@socket = io.connect("http://localhost:8000")
-
-socket.on "connect", ->
-  socket.emit "set name", NAME
-
-socket.on "tick", (data) ->
-
-  world.acceptTickData(data)
-
+explore = (world) ->
   pp = world.player.position
+  goals = new PointSet(world.unexplored.values())
+  for t in world.treasures
+    goals.add(t.position)
   window.explorer = new Explorer(
     pp,
     world.floors,
-    world.unexplored
+    goals
   )
   path = explorer.search()
   drawingPathfinding.c.clearRect(0, 0, WIDTH, HEIGHT)
@@ -240,6 +226,28 @@ socket.on "tick", (data) ->
 
   if dir?
     socket.emit "move", dir: dir
+
+
+##
+# Instances
+
+@world = new World
+renderer = new WorldRenderer(world)
+
+
+##
+# WebSocket!
+
+@socket = io.connect("http://treasure-war:8000")
+
+socket.on "connect", ->
+  socket.emit "set name", NAME
+
+socket.on "tick", (data) ->
+
+  world.acceptTickData(data)
+
+  explore(world)
 
   renderer.render()
 
