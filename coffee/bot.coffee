@@ -2,6 +2,8 @@ NAME = "pda"
 TILE_SIZE = 8
 WIDTH = 800
 HEIGHT = 800
+TILES_X = 100
+TILES_Y = 100
 BACKGROUND = "black"
 VISION = 5
 COLORS = {
@@ -41,12 +43,20 @@ drawingGrid.grid(WIDTH, HEIGHT, TILE_SIZE, COLORS.grid)
 
 class World
   constructor: ->
+    @unexplored = new PointSet(@allPoints())
     @walls = new PointSet([])
     @floors = new PointSet([])
     @player = new Player()
     @treasures = []
     @stashes = []
     @enemies = []
+
+  allPoints: ->
+    points = []
+    for y in [0...TILES_Y]
+      for x in [0...TILES_X]
+        points.push Point.at(x, y)
+    points
 
   setTreasureRawPoints: (rawPoints) ->
     @treasures = _(rawPoints).map (rp) ->
@@ -71,6 +81,18 @@ class World
         @addedWalls.push(wall)
       @walls.add(point)
 
+  # Remembers floor tiles.
+  # Also reduces unexplored points.
+  addFloors: ->
+    position = @player.position
+    radius = Math.floor(VISION / 2)
+    for y in [(position.y - radius)..(position.y + radius)]
+      for x in [(position.x - radius)..(position.x + radius)]
+        point = Point.at(x, y)
+        @unexplored.remove(point)
+        unless @walls.contains(point) || @floors.contains(point)
+          @floors.add(point)
+
   acceptTickData: (data) ->
 
     # Player updates.
@@ -79,15 +101,7 @@ class World
 
     # Wall updates.
     @addWalls(data.tiles.filter (t) -> t.type == "wall")
-
-    # Add other tiles in FoV as floor tiles.
-    position = @player.position
-    radius = Math.floor(VISION / 2)
-    for y in [(position.y - radius)..(position.y + radius)]
-      for x in [(position.x - radius)..(position.x + radius)]
-        point = Point.at(x, y)
-        unless @walls.contains(point) || @floors.contains(point)
-          @floors.add(point)
+    @addFloors()
 
     # Nearby entities.
     @setTreasureRawPoints(_(data.nearby_items).filter (i) -> i.is_treasure)
@@ -157,7 +171,6 @@ class Entity
 class Player extends Entity
   color: -> Color.string(128, 128, 255)
   setHealth: (health) ->
-    console.log("Health: #{@health} -> #{health}") if health != @health
     @health = health
 
 class Treasure extends Entity
@@ -172,30 +185,13 @@ class Enemy extends Entity
 class Wall extends Entity
   color: -> COLORS.wall
 
-class PointSet
-  constructor: (@points) ->
-  add: (point) ->
-    @points.push(point) unless @contains(point)
-  remove: (point) ->
-    for p, i in @points
-      if p.isEqual(point)
-        @points.splice(i, 1)
-        return
-  values: ->
-    @points
-  count: ->
-    @points.length
-  contains: (point) ->
-    for p in @points
-      return true if p.isEqual(point)
-    return false
 
 
 
 ##
 # Instances
 
-world = new World
+@world = new World
 renderer = new WorldRenderer(world)
 
 
@@ -208,7 +204,32 @@ socket.on "connect", ->
   socket.emit "set name", NAME
 
 socket.on "tick", (data) ->
+
   world.acceptTickData(data)
+
+  pp = world.player.position
+  window.explorer = new Explorer(
+    pp,
+    world.floors,
+    world.unexplored
+  )
+  path = explorer.search()
+  drawingGrid.c.clearRect(0, 0, WIDTH, HEIGHT)
+  for point in path
+    drawingGrid.square(point.fromTile(TILE_SIZE), TILE_SIZE, Color.string(0, 255, 0, 0.5))
+
+  if path[0]?
+    nextPoint = path[0]
+    if path[0].x == pp.x
+      if nextPoint.y == pp.y + 1 then dir = "s"
+      else if nextPoint.y == pp.y - 1 then dir = "n"
+    else if path[0].y == pp.y
+      if nextPoint.x == pp.x - 1 then dir = "w"
+      else if nextPoint.x == pp.x + 1 then dir = "e"
+
+  if dir?
+    socket.emit "move", dir: dir
+
   renderer.render()
 
 
