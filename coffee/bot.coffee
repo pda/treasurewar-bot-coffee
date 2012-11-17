@@ -60,6 +60,14 @@ class World
         points.push Point.at(x, y)
     points
 
+  isPlayerHome: ->
+    @player.position.isEqual(@yourStash.position)
+
+  isPlayerOnTreasure: ->
+    for t in @treasures
+      return true if @player.position.isEqual(t.position)
+    false
+
   setTreasureRawPoints: (rawPoints) ->
     @treasures = _(rawPoints).map (rp) ->
       _(new Treasure).tap (t) ->
@@ -104,6 +112,7 @@ class World
     # Player updates.
     @player.setRawPosition(data.you.position)
     @player.setHealth(data.you.health)
+    @player.setHasTreasure(data.you.item_in_hand?.is_treasure)
 
     # Wall updates.
     @addWalls(data.tiles.filter (t) -> t.type == "wall")
@@ -183,6 +192,8 @@ class Player extends Entity
   color: -> Color.string(128, 128, 255)
   setHealth: (health) ->
     @health = health
+  setHasTreasure: (has) ->
+    @hasTreasure = has
 
 class Treasure extends Entity
   color: -> COLORS.treasure
@@ -200,31 +211,51 @@ class Wall extends Entity
 ##
 # Random shit
 
-explore = (world) ->
+directionForPath = (world, path) ->
   pp = world.player.position
-  goals = new PointSet(world.unexplored.values())
-  for t in world.treasures
-    goals.add(t.position)
-  window.explorer = new Explorer(
-    pp,
-    world.floors,
-    goals
-  )
-  path = explorer.search()
+  if path[0]?
+    nextPoint = path[0]
+    if path[0].x == pp.x
+      if nextPoint.y == pp.y + 1
+        return "s"
+      else if nextPoint.y == pp.y - 1
+        return "n"
+    else if path[0].y == pp.y
+      if nextPoint.x == pp.x - 1
+        return "w"
+      else if nextPoint.x == pp.x + 1
+        return "e"
+
+drawPath = (path) ->
   drawingPathfinding.c.clearRect(0, 0, WIDTH, HEIGHT)
   for point in path
     drawingPathfinding.square(point.fromTile(TILE_SIZE), TILE_SIZE, Color.string(0, 255, 0, 0.5))
 
-  if path[0]?
-    nextPoint = path[0]
-    if path[0].x == pp.x
-      if nextPoint.y == pp.y + 1 then dir = "s"
-      else if nextPoint.y == pp.y - 1 then dir = "n"
-    else if path[0].y == pp.y
-      if nextPoint.x == pp.x - 1 then dir = "w"
-      else if nextPoint.x == pp.x + 1 then dir = "e"
+explore = (world) ->
+  pp = world.player.position
 
-  if dir?
+  goals = new PointSet(world.unexplored.values())
+  goals.add(t.position) for t in world.treasures
+
+  window.explorer = new Explorer(pp, world.floors, goals)
+  path = explorer.search()
+
+  drawPath(path)
+
+  if (dir = directionForPath(world, path))
+    socket.emit "move", dir: dir
+    true
+  else
+    false
+
+
+goHome = (world) ->
+  pp = world.player.position
+  goals = new PointSet([world.yourStash.position])
+  window.explorer = new Explorer(pp, world.floors, goals)
+  path = explorer.search()
+  drawPath(path)
+  if (dir = directionForPath(world, path))
     socket.emit "move", dir: dir
 
 
@@ -238,16 +269,30 @@ renderer = new WorldRenderer(world)
 ##
 # WebSocket!
 
-@socket = io.connect("http://treasure-war:8000")
+#@socket = io.connect("http://treasure-war:8000")
+@socket = io.connect("http://localhost:8000")
 
 socket.on "connect", ->
   socket.emit "set name", NAME
 
 socket.on "tick", (data) ->
-
   world.acceptTickData(data)
 
-  explore(world)
+  for message in data.messages
+    console.log message unless message.notice.match(/^You moved/)
+
+  if world.player.hasTreasure
+    if world.isPlayerHome()
+      console.log("drop!")
+      socket.emit("drop", {})
+    else
+      goHome(world)
+  else if world.isPlayerOnTreasure()
+    socket.emit("pick up")
+  else
+    purposeful = explore(world)
+    unless purposeful
+      world.unexplored = world.allPoints()
 
   renderer.render()
 
