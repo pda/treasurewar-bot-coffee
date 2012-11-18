@@ -269,8 +269,8 @@ renderer = new WorldRenderer(world)
 ##
 # WebSocket!
 
-#@socket = io.connect("http://treasure-war:8000")
-@socket = io.connect("http://localhost:8000")
+host = window.location.hash?.replace("#", "") || "localhost:8000"
+@socket = io.connect("http://#{host}")
 
 socket.on "connect", ->
   socket.emit "set name", NAME
@@ -283,7 +283,6 @@ socket.on "tick", (data) ->
 
   if world.player.hasTreasure
     if world.isPlayerHome()
-      console.log("drop!")
       socket.emit("drop", {})
     else
       goHome(world)
