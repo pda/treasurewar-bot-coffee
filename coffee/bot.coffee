@@ -221,35 +221,47 @@ class Wall extends Entity
 # Random shit
 
 directionForPath = (world, path) ->
-  pp = world.player.position
-  if path[0]?
-    nextPoint = path[0]
-    if path[0].x == pp.x
-      if nextPoint.y == pp.y + 1
-        return "s"
-      else if nextPoint.y == pp.y - 1
-        return "n"
-    else if path[0].y == pp.y
-      if nextPoint.x == pp.x - 1
-        return "w"
-      else if nextPoint.x == pp.x + 1
-        return "e"
+  return unless path[0]?
+  delta = path[0].subtract(world.player.position)
+  {
+    "-1,-1": "nw"
+    "0,-1": "n"
+    "1,-1": "ne"
+    "-1,0": "w"
+    "1,0": "e"
+    "-1,1": "sw"
+    "0,1": "s"
+    "1,1": "se"
+  }[delta.toString()]
 
-drawPath = (path) ->
-  drawingPathfinding.c.clearRect(0, 0, WIDTH, HEIGHT)
-  for point in path
-    drawingPathfinding.square(point.fromTile(TILE_SIZE), TILE_SIZE, Color.string(0, 255, 0, 0.5))
+drawPath = (player, path) ->
+  if path.length
+    drawingPathfinding.c.clearRect(0, 0, WIDTH, HEIGHT)
+    color = Color.string(64, 64, 255, 1)
+    line = new Line(player.position.fromTile(TILE_SIZE), path[0].fromTile(TILE_SIZE))
+    drawingPathfinding.line(line, strokeStyle: color)
+    _(path).inject (memo, point) ->
+      if memo
+        line = new Line(memo.fromTile(TILE_SIZE), point.fromTile(TILE_SIZE))
+        drawingPathfinding.line(line, strokeStyle: color)
+      point
+
 
 explore = (world) ->
   pp = world.player.position
 
+  traversables = new PointSet(world.floors.values())
+  for enemy in world.enemies
+    for point in enemy.position.neighborsIncludingDiagonal()
+      traversables.remove(point)
+
   goals = new PointSet(world.unexplored.values())
   goals.add(t.position) for t in world.treasures
 
-  window.explorer = new Explorer(pp, world.floors, goals)
+  explorer = new Explorer(pp, traversables, goals)
   path = explorer.search()
 
-  drawPath(path)
+  drawPath(world.player, path)
 
   if (dir = directionForPath(world, path))
     socket.emit "move", dir: dir
@@ -261,9 +273,9 @@ explore = (world) ->
 goHome = (world) ->
   pp = world.player.position
   goals = new PointSet([world.yourStash.position])
-  window.explorer = new Explorer(pp, world.floors, goals)
+  explorer = new Explorer(pp, world.floors, goals)
   path = explorer.search()
-  drawPath(path)
+  drawPath(world.player, path)
   if (dir = directionForPath(world, path))
     socket.emit "move", dir: dir
 
@@ -288,7 +300,8 @@ socket.on "tick", (data) ->
   world.acceptTickData(data)
 
   for message in data.messages
-    console.log message.notice unless message.notice?.match(/^You moved/)
+    if message?.notice && !message.notice.match(/^You moved/)
+      console.log message.notice
 
   if world.player.hasTreasure
     if world.isPlayerHome()
