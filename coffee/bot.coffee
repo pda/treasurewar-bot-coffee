@@ -208,6 +208,10 @@ class Stash extends Entity
 
 class Enemy extends Entity
   color: -> COLORS.enemy
+  draw: (dt) ->
+    super
+    for point in @position.neighborsIncludingDiagonal()
+      dt.square(point.fromTile(TILE_SIZE), TILE_SIZE, Color.string(255, 0, 0, 0.2))
 
 class Wall extends Entity
   color: -> COLORS.wall
