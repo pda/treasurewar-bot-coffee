@@ -5,14 +5,18 @@ class @Explorer
   # goals: PointSet
   constructor: (@start, @traversables, @goals) ->
 
-  search: ->
-    open = new PointSet([@start]) # To be evaluated.
+  search: () ->
+    start = @start
+    open = new PointSet([start]) # To be evaluated.
     closed = new PointSet([])    # Already evaluated.
-    cameFrom = {}                 # Map of navigated nodes.
-    obstacles = new PointSet(obstacles)
+    cameFrom = {}                # Map of navigated nodes.
+    gScores = {}
+    gScores[start.toString()] = 0
+    fScores = {}
+    fScores[start.toString()] = @heuristicCostEstimate(start, gScores)
 
     while open.count()
-      current = open.values()[0]
+      current = @sortByHeuristicCostEstimate(open.values(), gScores)[0]
 
       # Success
       if @goals.contains(current)
@@ -23,11 +27,16 @@ class @Explorer
       open.remove(current)
       closed.add(current)
 
-      for neighbor in @neighbors(current)
+      for neighbor in current.neighborsIncludingDiagonal()
         continue if closed.contains(neighbor)
         if @traversables.contains(neighbor) || @goals.contains(neighbor)
-          open.add(neighbor)
-          cameFrom[neighbor.toString()] = current
+          tentativeGScore = gScores[current.toString()] + @manhattanDistance(current, neighbor)
+
+          if !open.contains(neighbor) || tentativeGScore < gScores[neighbor.toString()]
+            open.add(neighbor)
+            cameFrom[neighbor.toString()] = current
+            gScores[neighbor.toString()] = tentativeGScore
+            fScores[neighbor.toString()] = tentativeGScore + @heuristicCostEstimate(neighbor, gScores)
 
     [] # failure
 
@@ -39,12 +48,12 @@ class @Explorer
     else
       return [currentNode]
 
-  neighbors: (point) ->
-    x = point.x
-    y = point.y
-    [
-      [x, y - 1]
-      [x - 1, y]
-      [x + 1, y]
-      [x, y + 1]
-    ].map (p) -> new Point(p[0], p[1])
+  heuristicCostEstimate: (point, gScores) ->
+    gScores[point.toString()]
+
+  sortByHeuristicCostEstimate: (points, gScores) ->
+    points.sort (a, b) =>
+      @heuristicCostEstimate(a, gScores) - @heuristicCostEstimate(b, gScores)
+
+  manhattanDistance: (a, b) ->
+    Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
