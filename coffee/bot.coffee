@@ -102,7 +102,6 @@ class World
     radius = Math.floor(VISION / 2)
     for y in [(position.y - radius)..(position.y + radius)]
       for x in [(position.x - radius)..(position.x + radius)]
-        continue unless x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
         point = Point.at(x, y)
         @unexplored.remove(point)
         unless @walls.contains(point) || @floors.contains(point)
@@ -247,20 +246,21 @@ drawPath = (player, path) ->
         drawingPathfinding.line(line, strokeStyle: color)
       point
 
-
-explore = (world) ->
-  pp = world.player.position
-
+getTraversables = (world) ->
   traversables = new PointSet(world.floors.values())
   for enemy in world.enemies
     traversables.remove(enemy.position)
     for point in enemy.position.neighborsIncludingDiagonal()
       traversables.remove(point)
+  traversables
+
+explore = (world) ->
+  pp = world.player.position
 
   goals = new PointSet(world.unexplored.values())
   goals.add(t.position) for t in world.treasures
 
-  explorer = new Explorer(pp, traversables, goals)
+  explorer = new Explorer(pp, getTraversables(world), goals)
   path = explorer.search()
 
   drawPath(world.player, path)
@@ -275,7 +275,7 @@ explore = (world) ->
 goHome = (world) ->
   pp = world.player.position
   goals = new PointSet([world.yourStash.position])
-  explorer = new Explorer(pp, world.floors, goals)
+  explorer = new Explorer(pp, getTraversables(world), goals)
   path = explorer.search()
   drawPath(world.player, path)
   if (dir = directionForPath(world, path))
