@@ -220,9 +220,8 @@ class Wall extends Entity
 ##
 # Random shit
 
-directionForPath = (world, path) ->
-  return unless path[0]?
-  delta = path[0].subtract(world.player.position)
+directionBetweenPoints = (a, b) ->
+  delta = b.subtract(a)
   {
     "-1,-1": "nw"
     "0,-1": "n"
@@ -233,6 +232,10 @@ directionForPath = (world, path) ->
     "0,1": "s"
     "1,1": "se"
   }[delta.toString()]
+
+directionForPath = (world, path) ->
+  return unless path[0]?
+  directionBetweenPoints(world.player.position, path[0])
 
 drawPath = (player, path) ->
   if path.length
