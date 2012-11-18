@@ -115,7 +115,7 @@ class World
     @player.setHasTreasure(data.you.item_in_hand?.is_treasure)
 
     # Wall updates.
-    @addWalls(data.tiles.filter (t) -> t.type == "wall")
+    @addWalls(_(data.tiles).filter (t) -> t.type == "wall")
     @addFloors()
 
     # Your Stash
