@@ -253,6 +253,7 @@ explore = (world) ->
 
   traversables = new PointSet(world.floors.values())
   for enemy in world.enemies
+    traversables.remove(enemy.position)
     for point in enemy.position.neighborsIncludingDiagonal()
       traversables.remove(point)
 
