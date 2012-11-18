@@ -122,9 +122,13 @@ class World
     @setYourStashRawPosition(data.you.stash)
 
     # Nearby entities.
-    @setTreasureRawPoints(_(data.nearby_items).filter (i) -> i.is_treasure)
-    @setStashRawPoints(data.nearby_stashes)
-    @setEnemyRawPoints(data.nearby_players)
+    @setTreasureRawPoints(_(data.tiles).filter (t) -> t.type == "treasure")
+    @setStashRawPoints(_(data.tiles).filter (t) -> t.type == "stash")
+    @setEnemyRawPoints(_(data.tiles).chain().
+      filter((t) -> t.type == "player").
+      map((t) -> t.position).
+      value()
+    )
 
 
 class WorldRenderer
@@ -147,11 +151,11 @@ class WorldRenderer
     # Draw treasure
     entity.draw(drawingMain) for entity in @world.treasures
 
-    # Draw self
-    @world.player.draw(drawingMain)
-
     # Draw enemies
     entity.draw(drawingMain) for entity in @world.enemies
+
+    # Draw self
+    @world.player.draw(drawingMain)
 
     # Draw explored area
     @drawExploredArea()
@@ -279,7 +283,7 @@ socket.on "tick", (data) ->
   world.acceptTickData(data)
 
   for message in data.messages
-    console.log message unless message.notice.match(/^You moved/)
+    console.log message.notice unless message.notice?.match(/^You moved/)
 
   if world.player.hasTreasure
     if world.isPlayerHome()
