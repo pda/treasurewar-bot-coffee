@@ -1,13 +1,17 @@
 class @PointSet
 
+  SIZE = 50
+
   constructor: (@points) ->
-    @table = [0..50].map -> new Uint8Array(50)
+    @table = [0..SIZE].map -> new Uint8Array(SIZE)
     @add(p) for p in @points
 
   add: (point) ->
+    return unless @inBounds(point)
     @table[point.x][point.y] = 1
 
   remove: (point) ->
+    return unless @inBounds(point)
     @table[point.x][point.y] = 0
 
   values: ->
@@ -28,4 +32,9 @@ class @PointSet
     @values().length
 
   contains: (point) ->
+    return false unless @inBounds(point)
     @table[point.x][point.y] == 1
+
+  inBounds: (point) ->
+    [x, y] = [point.x, point.y]
+    0 <= x < SIZE && 0 <= y < SIZE
