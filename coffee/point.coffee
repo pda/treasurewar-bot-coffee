@@ -45,3 +45,19 @@ class @Point
   normalized: ->
     l = @length()
     if l > 0 then Point.at(@x / l, @y / l) else this
+
+  # Neighbors, not including diagonals.
+  neighbors: ->
+    [
+      [@x, @y - 1]
+      [@x - 1, @y]
+      [@x + 1, @y]
+      [@x, @y + 1]
+    ].map (p) -> new Point(p[0], p[1])
+
+  neighborsIncludingDiagonal: ->
+    [
+      [@x - 1, @y - 1], [@x, @y - 1], [@x + 1, @y - 1],
+      [@x - 1, @y], [@x + 1, @y],
+      [@x - 1, @y + 1], [@x, @y + 1], [@x + 1, @y + 1],
+    ].map (p) -> new Point(p[0], p[1])
