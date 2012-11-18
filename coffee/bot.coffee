@@ -102,6 +102,7 @@ class World
     radius = Math.floor(VISION / 2)
     for y in [(position.y - radius)..(position.y + radius)]
       for x in [(position.x - radius)..(position.x + radius)]
+        continue unless x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
         point = Point.at(x, y)
         @unexplored.remove(point)
         unless @walls.contains(point) || @floors.contains(point)
