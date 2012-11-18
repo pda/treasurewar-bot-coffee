@@ -23,3 +23,7 @@ class @DrawingTools
     if style then @c.fillStyle = style
     half = size / 2
     @c.fillRect(point.x - half, point.y - half, size, size)
+
+  clearSquare: (point, size, style) ->
+    half = size / 2
+    @c.clearRect(point.x - half, point.y - half, size, size)
