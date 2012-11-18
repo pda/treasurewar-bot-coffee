@@ -126,6 +126,7 @@ class World
     @setStashRawPoints(_(data.tiles).filter (t) -> t.type == "stash")
     @setEnemyRawPoints(_(data.tiles).chain().
       filter((t) -> t.type == "player").
+      reject((t) => Point.fromRaw(t.position).isEqual(@player.position)).
       map((t) -> t.position).
       value()
     )
