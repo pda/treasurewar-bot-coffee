@@ -292,7 +292,7 @@ socket.on "tick", (data) ->
   else
     purposeful = explore(world)
     unless purposeful
-      world.unexplored = world.allPoints()
+      world.unexplored = new PointSet(world.allPoints())
 
   renderer.render()
 
