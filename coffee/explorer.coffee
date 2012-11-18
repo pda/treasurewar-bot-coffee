@@ -15,7 +15,7 @@ class @Explorer
     fScores = {}
     fScores[start.toString()] = @heuristicCostEstimate(start, gScores)
 
-    while open.count()
+    while open.any()
       current = @sortByHeuristicCostEstimate(open.values(), gScores)[0]
 
       # Success
