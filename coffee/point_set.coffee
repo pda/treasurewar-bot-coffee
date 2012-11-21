@@ -1,6 +1,6 @@
 class @PointSet
 
-  SIZE = 50
+  SIZE = 60
 
   constructor: (@points) ->
     @table = [0..SIZE].map -> new Uint8Array(SIZE)
