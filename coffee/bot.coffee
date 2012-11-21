@@ -68,6 +68,13 @@ class World
       return true if @player.position.isEqual(t.position)
     false
 
+  deadestEnemyNextToPlayer: ->
+    neighbors = @player.position.neighborsIncludingDiagonal()
+    _(@enemies).chain().
+      filter((enemy) -> _(neighbors).any (point) -> point.isEqual(enemy.position)).
+      sort((a, b) -> a.health - b.health).
+      value()?[0]
+
   setTreasureRawPoints: (rawPoints) ->
     @treasures = _(rawPoints).map (rp) ->
       _(new Treasure).tap (t) ->
@@ -84,6 +91,16 @@ class World
   setEnemyRawPoints: (rawPoints) ->
     @enemies = _(rawPoints).map (rp) ->
       _(new Enemy).tap (t) -> t.setRawPosition(rp)
+
+  setEnemyTiles: (tiles) ->
+    tiles = _(tiles).reject (t) =>
+      p = Point.fromRaw(t.position)
+      p.isEqual(@player.position)
+    @enemies = _(tiles).map (tile) ->
+      enemy = new Enemy()
+      enemy.setRawPosition(tile.position)
+      enemy.health = tile.health
+      enemy
 
   addWalls: (rawPoints) ->
     @addedWalls = []
@@ -124,12 +141,8 @@ class World
     # Nearby entities.
     @setTreasureRawPoints(_(data.tiles).filter (t) -> t.type == "treasure")
     @setStashRawPoints(_(data.tiles).filter (t) -> t.type == "stash")
-    @setEnemyRawPoints(_(data.tiles).chain().
-      filter((t) -> t.type == "player").
-      reject((t) => Point.fromRaw(t.position).isEqual(@player.position)).
-      map((t) -> t.position).
-      value()
-    )
+
+    @setEnemyTiles(_(data.tiles).filter((t) -> t.type == "player"))
 
 
 class WorldRenderer
@@ -240,13 +253,14 @@ directionForPath = (world, path) ->
 drawPath = (player, path) ->
   if path.length
     drawingPathfinding.c.clearRect(0, 0, WIDTH, HEIGHT)
-    color = Color.string(64, 64, 255, 1)
+    color = Color.string(128, 128, 255, 1)
     line = new Line(player.position.fromTile(TILE_SIZE), path[0].fromTile(TILE_SIZE))
-    drawingPathfinding.line(line, strokeStyle: color)
+    drawingOptions = {strokeStyle: color, lineWidth: 4}
+    drawingPathfinding.line(line, drawingOptions)
     _(path).inject (memo, point) ->
       if memo
         line = new Line(memo.fromTile(TILE_SIZE), point.fromTile(TILE_SIZE))
-        drawingPathfinding.line(line, strokeStyle: color)
+        drawingPathfinding.line(line, drawingOptions)
       point
 
 getTraversables = (world) ->
@@ -313,8 +327,15 @@ socket.on "tick", (data) ->
       socket.emit("drop", {})
     else
       goHome(world)
+
   else if world.isPlayerOnTreasure()
     socket.emit("pick up")
+
+  else if enemy = world.deadestEnemyNextToPlayer()
+    dir = directionBetweenPoints(world.player.position, enemy.position)
+    console.log("attack!: #{dir}")
+    socket.emit("attack", {dir})
+
   else
     purposeful = explore(world)
     unless purposeful
